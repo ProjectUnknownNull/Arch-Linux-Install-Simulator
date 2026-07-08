@@ -1,0 +1,32 @@
+name: Arch Lab
+
+on:
+  workflow_dispatch:
+
+jobs:
+  arch:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install QEMU
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            qemu-system-x86 \
+            qemu-utils \
+            wget
+
+      - name: Download Arch ISO
+        run: |
+          wget -O archlinux.iso https://geo.mirror.pkgbuild.com/iso/latest/archlinux-x86_64.iso
+
+      - name: Create virtual disk
+        run: |
+          qemu-img create -f qcow2 arch.qcow2 20G
+
+      - name: Show files
+        run: |
+          ls -lh
