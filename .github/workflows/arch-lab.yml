@@ -2,6 +2,26 @@ name: Arch Lab
 
 on:
   workflow_dispatch:
+    inputs:
+      ram:
+        description: "RAM (MB)"
+        required: true
+        default: "4096"
+
+      cpu:
+        description: "CPU Cores"
+        required: true
+        default: "2"
+
+      disk:
+        description: "Disk Size"
+        required: true
+        default: "20G"
+
+      resolution:
+        description: "Resolution"
+        required: true
+        default: "1920x1080"
 
 jobs:
   arch:
@@ -33,13 +53,25 @@ jobs:
 
       - name: Create virtual disk
         run: |
-          qemu-img create -f qcow2 arch.qcow2 20G
+          qemu-img create -f qcow2 arch.qcow2 ${{ github.event.inputs.disk }}
+
+      - name: Arch Lab Info
+        run: |
+           echo "===================================="
+           echo "        🧪 ARCH LAB"
+           echo "===================================="
+           echo ""
+           echo "CPU : ${{ github.event.inputs.cpu }}"
+           echo "RAM : ${{ github.event.inputs.ram }} MB"
+           echo "Disk: ${{ github.event.inputs.disk }}"
+           echo "Res : ${{ github.event.inputs.resolution }}"
+           echo ""    
 
       - name: Start Arch VM
         run: |
           qemu-system-x86_64 \
-            -m 2048 \
-            -smp 2 \
+            -m ${{ github.event.inputs.ram }} \
+            -smp ${{ github.event.inputs.cpu }} \
             -drive file=arch.qcow2,format=qcow2 \
             -cdrom archlinux.iso \
             -boot d \
