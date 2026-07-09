@@ -1,4 +1,4 @@
-name: Linux lab
+name: Linux Lab
 
 on:
   workflow_dispatch:
@@ -29,18 +29,12 @@ on:
         default: "1920x1080"
 
 jobs:
-  linuxlab:
+  arch:
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-
-      - name: Cache ISO
-        uses: actions/cache@v4
-        with:
-          path: archlinux.iso
-          key: archlinux-${{ runner.os }}
 
       - name: Install packages
         run: |
@@ -90,14 +84,24 @@ jobs:
         run: |
           cp /usr/share/OVMF/OVMF_VARS_4M.fd OVMF_VARS.fd
 
-      - name: Create virtual disk
+      - name: Create Virtual Disk
         run: |
-          qemu-img create -f qcow2 arch.qcow2 ${{ github.event.inputs.disk }}
+          echo "Creating virtual disk..."
+
+          qemu-img create \
+            -f qcow2 \
+            -o lazy_refcounts=on \
+            arch.qcow2 \
+            ${{ github.event.inputs.disk }}
+
+          echo
+          echo "===== Disk Information ====="
+          qemu-img info arch.qcow2
 
       - name: Linux Lab Info
         run: |
            echo "===================================="
-           echo "        🧪 Linux LAB"
+           echo "        🧪 LINUX LAB"
            echo "===================================="
            echo ""
            echo "CPU : ${{ github.event.inputs.cpu }}"
@@ -106,28 +110,35 @@ jobs:
            echo "Res : ${{ github.event.inputs.resolution }}"
            echo ""    
 
-      - name: Start VM
+      - name: Start Linux Lab VM
         run: |
+          echo "Starting UEFI VM..."
+
           qemu-system-x86_64 \
             -m ${{ github.event.inputs.ram }} \
-            -smp ${{ github.event.inputs.cpu }} \
+            -smp ${{ github.event.inputs.cpu }},sockets=1,cores=${{ github.event.inputs.cpu }},threads=1 \
+            \
             -machine q35 \
+            -cpu max \
             \
             -drive if=pflash,format=raw,readonly=on,file=/usr/share/OVMF/OVMF_CODE_4M.fd \
             -drive if=pflash,format=raw,file=OVMF_VARS.fd \
             \
-            -drive file=arch.qcow2,format=qcow2 \
-            -cdrom linux.iso \
+            -drive file=linux.iso,format=raw,media=cdrom \
+            -drive file=arch.qcow2,format=qcow2,if=virtio,cache=unsafe,aio=threads,discard=unmap \
             \
-            -boot order=d \
+            -boot menu=on \
+            \
+            -device virtio-vga \
             \
             -display none \
-            -device virtio-gpu-pci \
             -vnc :0 \
+            \
+            -rtc base=utc \
             -audiodev none,id=noaudio \
+            \
             > qemu.log 2>&1 &
 
-          echo "Starting UEFI VM..."
           sleep 10
 
           echo "===== QEMU Log ====="
@@ -137,9 +148,33 @@ jobs:
           echo "===== Running QEMU ====="
           ps -ef | grep qemu || true
 
+          echo
+          echo "===== Listening Ports ====="
+          ss -tlnp || true
+
       - name: Start noVNC
         run: |
-          websockify --web=/usr/share/novnc/ 6080 localhost:5900 > novnc.log 2>&1 &
+          echo "Starting noVNC..."
+
+          websockify \
+            --web=/usr/share/novnc \
+            6080 \
+            localhost:5900 \
+            > novnc.log 2>&1 &
+
+          sleep 5
+
+          echo
+          echo "===== noVNC Process ====="
+          ps -ef | grep websockify || true
+
+          echo
+          echo "===== Listening Ports ====="
+          ss -tlnp | grep -E "5900|6080" || true
+
+          echo
+          echo "===== noVNC Log ====="
+          cat novnc.log || true
 
           sleep 5
 
@@ -154,7 +189,7 @@ jobs:
 
           echo ""
           echo "========================================"
-          echo "🧪 Linux lab IS READY!"
+          echo "🧪 LINUX LAB IS READY!"
           echo "========================================"
           echo ""
           echo "🌍 Browser:"
