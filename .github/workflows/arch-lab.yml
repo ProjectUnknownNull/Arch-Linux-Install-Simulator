@@ -116,7 +116,7 @@ jobs:
             -boot order=d \
             \
             -display none \
-            -vga virtio \
+            -device virtio-gpu-pci \
             -vnc :0 \
             -audiodev none,id=noaudio \
             > qemu.log 2>&1 &
