@@ -1,4 +1,4 @@
-name: Linux Lab
+name: Distro Lab
 
 on:
   workflow_dispatch:
@@ -29,7 +29,7 @@ on:
         default: "1920x1080"
 
 jobs:
-  arch:
+  distro:
     runs-on: ubuntu-latest
 
     steps:
@@ -101,7 +101,7 @@ jobs:
       - name: Linux Lab Info
         run: |
            echo "===================================="
-           echo "        🧪 LINUX LAB"
+           echo "        🧪 DISTRO LAB"
            echo "===================================="
            echo ""
            echo "CPU : ${{ github.event.inputs.cpu }}"
@@ -110,7 +110,7 @@ jobs:
            echo "Res : ${{ github.event.inputs.resolution }}"
            echo ""
 
-      - name: Start Linux Lab VM
+      - name: Start Distro Lab VM
         run: |
           echo "Starting UEFI VM..."
 
@@ -192,7 +192,7 @@ jobs:
 
           echo ""
           echo "========================================"
-          echo "🧪 LINUX LAB IS READY!!"
+          echo "🧪 DISTRO LAB IS READY!"
           echo "========================================"
           echo ""
           echo "🌍 Browser:"
