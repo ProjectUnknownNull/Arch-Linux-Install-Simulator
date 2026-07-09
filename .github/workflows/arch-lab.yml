@@ -80,6 +80,10 @@ jobs:
             echo "Using cached Arch ISO."
           fi
 
+      - name: Prepare UEFI Firmware
+        run: |
+          cp /usr/share/OVMF/OVMF_VARS_4M.fd OVMF_VARS.fd
+
       - name: Create virtual disk
         run: |
           qemu-img create -f qcow2 arch.qcow2 ${{ github.event.inputs.disk }}
@@ -98,22 +102,26 @@ jobs:
 
       - name: Start Arch VM
         run: |
-          qemu-img create -f qcow2 arch.qcow2 ${{ github.event.inputs.disk }}
-
           qemu-system-x86_64 \
             -m ${{ github.event.inputs.ram }} \
             -smp ${{ github.event.inputs.cpu }} \
+            -machine q35 \
+            \
+            -drive if=pflash,format=raw,readonly=on,file=/usr/share/OVMF/OVMF_CODE_4M.fd \
+            -drive if=pflash,format=raw,file=OVMF_VARS.fd \
+            \
             -drive file=arch.qcow2,format=qcow2 \
             -cdrom archlinux.iso \
-            -boot d \
-            -machine pc \
+            \
+            -boot menu=on \
+            \
             -display none \
             -device virtio-vga \
             -vnc :0 \
             -audiodev none,id=noaudio \
             > qemu.log 2>&1 &
 
-          echo "Starting Arch VM..."
+          echo "Starting UEFI VM..."
           sleep 10
 
           echo "===== QEMU Log ====="
