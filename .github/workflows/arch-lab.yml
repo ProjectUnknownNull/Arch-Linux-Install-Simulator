@@ -113,10 +113,10 @@ jobs:
             -drive file=arch.qcow2,format=qcow2 \
             -cdrom archlinux.iso \
             \
-            -boot menu=on \
+            -boot order=d \
             \
             -display none \
-            -device virtio-vga \
+            -vga virtio \
             -vnc :0 \
             -audiodev none,id=noaudio \
             > qemu.log 2>&1 &
@@ -152,7 +152,7 @@ jobs:
           echo "========================================"
           echo ""
           echo "🌍 Browser:"
-          echo "${URL}/vnc.html?autoconnect=1&resize=remote"
+          echo "${URL}/vnc.html?autoconnect=1&resize=scale&show_dot=0"
           echo ""
           echo "========================================"
 
