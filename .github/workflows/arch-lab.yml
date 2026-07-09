@@ -1,8 +1,13 @@
-name: Arch Lab
+name: OS Lab
 
 on:
   workflow_dispatch:
     inputs:
+      iso:
+        description: "ISO Download URL"
+        required: true
+        default: "https://geo.mirror.pkgbuild.com/iso/latest/archlinux-x86_64.iso"
+
       ram:
         description: "RAM (MB)"
         required: true
@@ -31,7 +36,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Cache Arch ISO
+      - name: Cache ISO
         uses: actions/cache@v4
         with:
           path: archlinux.iso
@@ -71,14 +76,15 @@ jobs:
           chmod +x cloudflared-linux-amd64
           sudo mv cloudflared-linux-amd64 /usr/local/bin/cloudflared
 
-      - name: Download Arch ISO
+      - name: Download ISO
         run: |
-          if [ ! -f archlinux.iso ]; then
-            echo "Downloading latest Arch ISO..."
-            wget -O archlinux.iso https://geo.mirror.pkgbuild.com/iso/latest/archlinux-x86_64.iso
-          else
-            echo "Using cached Arch ISO."
-          fi
+          echo "Downloading ISO..."
+          echo "${{ github.event.inputs.iso }}"
+
+          wget \
+            --show-progress \
+            -O linux.iso \
+            "${{ github.event.inputs.iso }}"
 
       - name: Prepare UEFI Firmware
         run: |
@@ -88,10 +94,10 @@ jobs:
         run: |
           qemu-img create -f qcow2 arch.qcow2 ${{ github.event.inputs.disk }}
 
-      - name: Arch Lab Info
+      - name: OS Lab Info
         run: |
            echo "===================================="
-           echo "        🧪 ARCH LAB"
+           echo "        🧪 OS LAB"
            echo "===================================="
            echo ""
            echo "CPU : ${{ github.event.inputs.cpu }}"
@@ -100,7 +106,7 @@ jobs:
            echo "Res : ${{ github.event.inputs.resolution }}"
            echo ""    
 
-      - name: Start Arch VM
+      - name: Start VM
         run: |
           qemu-system-x86_64 \
             -m ${{ github.event.inputs.ram }} \
@@ -111,7 +117,7 @@ jobs:
             -drive if=pflash,format=raw,file=OVMF_VARS.fd \
             \
             -drive file=arch.qcow2,format=qcow2 \
-            -cdrom archlinux.iso \
+            -cdrom linux.iso \
             \
             -boot order=d \
             \
@@ -148,7 +154,7 @@ jobs:
 
           echo ""
           echo "========================================"
-          echo "🧪 ARCH LAB IS READY!"
+          echo "🧪 OS LAB IS READY!"
           echo "========================================"
           echo ""
           echo "🌍 Browser:"
