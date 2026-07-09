@@ -31,15 +31,39 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Cache Arch ISO
+        uses: actions/cache@v4
+        with:
+          path: archlinux.iso
+          key: archlinux-${{ runner.os }}
+
       - name: Install packages
         run: |
           sudo apt-get update
+
           sudo apt-get install -y \
             qemu-system-x86 \
             qemu-utils \
             novnc \
             websockify \
+            ovmf \
             wget
+
+      - name: Find OVMF firmware
+        run: |
+          echo "=================================="
+          echo " Searching for OVMF Firmware"
+          echo "=================================="
+
+          find /usr/share -type f \( \
+            -name "*OVMF*" -o \
+            -name "*.fd" \
+          \) | sort
+
+          echo
+          echo "=================================="
+          echo "Done!"
+          echo "=================================="
 
       - name: Install cloudflared
         run: |
@@ -49,7 +73,12 @@ jobs:
 
       - name: Download Arch ISO
         run: |
-          wget -O archlinux.iso https://geo.mirror.pkgbuild.com/iso/latest/archlinux-x86_64.iso
+          if [ ! -f archlinux.iso ]; then
+            echo "Downloading latest Arch ISO..."
+            wget -O archlinux.iso https://geo.mirror.pkgbuild.com/iso/latest/archlinux-x86_64.iso
+          else
+            echo "Using cached Arch ISO."
+          fi
 
       - name: Create virtual disk
         run: |
@@ -69,18 +98,30 @@ jobs:
 
       - name: Start Arch VM
         run: |
+          qemu-img create -f qcow2 arch.qcow2 ${{ github.event.inputs.disk }}
+
           qemu-system-x86_64 \
             -m ${{ github.event.inputs.ram }} \
             -smp ${{ github.event.inputs.cpu }} \
             -drive file=arch.qcow2,format=qcow2 \
             -cdrom archlinux.iso \
             -boot d \
-            -audiodev none,id=noaudio \
             -machine pc \
+            -display none \
+            -device virtio-vga \
             -vnc :0 \
+            -audiodev none,id=noaudio \
             > qemu.log 2>&1 &
 
+          echo "Starting Arch VM..."
           sleep 10
+
+          echo "===== QEMU Log ====="
+          cat qemu.log || true
+
+          echo
+          echo "===== Running QEMU ====="
+          ps -ef | grep qemu || true
 
       - name: Start noVNC
         run: |
@@ -95,7 +136,18 @@ jobs:
           echo "Waiting for tunnel..."
           sleep 15
 
-          echo "===== Tunnel Log ====="
+          URL=$(grep -o 'https://[^ ]*trycloudflare.com' tunnel.log | head -1)
+
+          echo ""
+          echo "========================================"
+          echo "🧪 ARCH LAB IS READY!"
+          echo "========================================"
+          echo ""
+          echo "🌍 Browser:"
+          echo "${URL}/vnc.html?autoconnect=1&resize=remote"
+          echo ""
+          echo "========================================"
+
           cat tunnel.log
 
       - name: Keep Runner Alive
